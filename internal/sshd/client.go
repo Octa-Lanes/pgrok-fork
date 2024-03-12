@@ -17,6 +17,7 @@ import (
 
 	"github.com/pgrok/pgrok/internal/conf"
 	"github.com/pgrok/pgrok/internal/database"
+	"github.com/pgrok/pgrok/internal/event"
 	"github.com/pgrok/pgrok/internal/strutil"
 )
 
@@ -106,11 +107,17 @@ func (c *Client) handleTCPIPForward(
 			"remote", c.serverConn.RemoteAddr(),
 			"forwardTo", listener.Addr(),
 		)
+
+		event.DisconnectionEvent(c.serverConn.RemoteAddr().String(), listener.Addr().String())
 	}()
 	c.logger.Info("Reverse tunnel server started",
 		"remote", c.serverConn.RemoteAddr(),
 		"forwardTo", listener.Addr(),
 	)
+
+	// Connection has been made. Call event to nodejs service
+	// madeConnectionEvent(conn.RemoteAddr(), listener.Addr())
+	event.MadeConnectionEvent(c.serverConn.RemoteAddr().String(), listener.Addr().String())
 
 	type forwardResponse struct {
 		Port uint32
@@ -127,6 +134,7 @@ func (c *Client) handleTCPIPForward(
 				}
 				return
 			}
+
 			c.logger.Debug("Tunneling connection",
 				"remote", conn.RemoteAddr(),
 				"forwardTo", listener.Addr(),
